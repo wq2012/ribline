@@ -1,0 +1,5 @@
+include ribline/configs/*.json
+include ribline/configs/*.joblib
+include split.json
+include README.md
+recursive-include ribline *.json *.joblib

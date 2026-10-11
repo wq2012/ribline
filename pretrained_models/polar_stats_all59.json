@@ -1,0 +1,59 @@
+{
+  "n_subjects": 59,
+  "kyphosis_aware": {
+    "n_ribs": 1402,
+    "strictly_monotonic": 1102,
+    "strictly_monotonic_frac": 0.7860199714693296,
+    "end_gt_start": 1402,
+    "non_monotonic": 300,
+    "max_reversal_rad": 1.226180613040924,
+    "n_reversal_gt": {
+      "0.02": 44,
+      "0.05": 14,
+      "0.1": 8,
+      "0.3": 3
+    },
+    "non_monotonic_per_rib_index": {
+      "01": 25,
+      "02": 26,
+      "03": 23,
+      "04": 26,
+      "05": 24,
+      "06": 20,
+      "07": 21,
+      "08": 17,
+      "09": 26,
+      "10": 22,
+      "11": 29,
+      "12": 41
+    }
+  },
+  "naive_torso_centre": {
+    "n_ribs": 1402,
+    "strictly_monotonic": 799,
+    "strictly_monotonic_frac": 0.5699001426533523,
+    "end_gt_start": 1402,
+    "non_monotonic": 603,
+    "max_reversal_rad": 1.3202667238742674,
+    "n_reversal_gt": {
+      "0.02": 255,
+      "0.05": 154,
+      "0.1": 107,
+      "0.3": 46
+    }
+  },
+  "rib1_posterior_end_minus_z_apex_mm": {
+    "n": 117,
+    "mean": 11.901358606837567,
+    "std": 9.322171524835737,
+    "median": 12.990000000000009,
+    "p5": -2.532399999999995,
+    "p95": 24.49770479999997
+  },
+  "spine_midline_abs_error_mm": {
+    "n_pairs": 695,
+    "mean": 2.471275982677607,
+    "std": 2.4402994781087086,
+    "median": 1.8257810488281052
+  }
+}

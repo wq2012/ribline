@@ -1,0 +1,20 @@
+{
+    "_comment": "Recipe that produced the released rib_unet_3d.pth (= full_run_v1/models/unet_ep20.pth). The original run read Centerlines_GT_corrected, which is byte-identical to Centerlines_GT for all 48 training subjects (verified in experiments/rebuttal/provenance.json); augmentation was NOT applied (the flag was ignored by the old script) and samples_per_volume was hard-coded to 8.",
+    "data_config": {
+        "image_directory": "Rib/Data/vol2mm",
+        "centerline_directory": "Rib/Data/Centerlines_GT",
+        "split_file": "Rib/delivery/split.json",
+        "augmentation": false
+    },
+    "model_config": {
+        "base_filters": 16
+    },
+    "training_config": {
+        "output_directory": "Rib/experiments/sota/full_run_v1",
+        "samples_per_volume": 8,
+        "epochs": 20,
+        "batch_size": 2,
+        "learning_rate": 0.001,
+        "num_workers": 4
+    }
+}

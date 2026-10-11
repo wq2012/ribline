@@ -1,0 +1,14 @@
+{
+  "scales": [
+    1.0,
+    2.0,
+    4.0
+  ],
+  "rsid_params": {
+    "num_pairs": 250,
+    "max_offset": 12,
+    "seed": 42
+  },
+  "use_anatomical_features": true,
+  "use_standard_hu": true
+}

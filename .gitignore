@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.venv/
+pretrained_models/*.joblib
+pretrained_models/*.pth

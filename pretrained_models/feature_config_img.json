@@ -1,0 +1,12 @@
+{
+  "scales": [
+    1.0,
+    2.0,
+    4.0
+  ],
+  "rsid_params": {
+    "num_pairs": 200,
+    "max_offset": 20,
+    "seed": 2026
+  }
+}

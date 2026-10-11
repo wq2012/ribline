@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ribline"
+version = "0.3.0"
+description = "Hybrid Semantic Context Forests, 3D U-Net, and Kyphosis-Aware Deformable Topology Matching for 3D Rib Centerline Tracing and Anatomical Labeling"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+  {name = "Quan Wang", email = "quanw@google.com"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "scikit-learn",
+    "scikit-image",
+    "joblib",
+    "jsonschema",
+    "pandas",
+    "SimpleITK",
+    "networkx",
+    "tqdm",
+    "torch>=2.0.0",
+]
+
+[project.optional-dependencies]
+torch = ["torch>=2.0.0"]
+
+[project.scripts]
+ribline-sota = "ribline.pipeline.pipeline_sota:main"
+ribline-evaluate = "ribline.pipeline.evaluate:main"
+
+[project.urls]
+"Homepage" = "https://github.com/wq2012/ribline"
+
+[tool.setuptools.packages.find]
+include = ["ribline*"]
+exclude = ["experiments*"]
+
+[tool.setuptools.package-data]
+ribline = ["configs/*.json", "configs/*.joblib"]

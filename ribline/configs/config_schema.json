@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RibLine Configuration",
+  "type": "object",
+  "properties": {
+    "data_config": {
+      "type": "object",
+      "properties": {
+        "image_directory": { "type": "string" },
+        "centerline_directory": { "type": "string" },
+        "split_file": { "type": "string" },
+        "select_files": {
+            "type": "array",
+            "items": { "type": "string" }
+        }
+      },
+      "required": ["image_directory"]
+    },
+    "model_config": {
+      "type": "object",
+      "properties": {
+        "n_estimators": { "type": "integer", "default": 100 },
+        "max_depth": { "type": "integer" },
+        "n_jobs": { "type": "integer", "default": -1 },
+        "dtype": { "type": "string", "enum": ["float32", "bfloat16"], "default": "float32" }
+      }
+    },
+    "training_config": {
+      "type": "object",
+      "properties": {
+        "output_directory": { "type": "string" },
+        "num_passes": { "type": "integer", "default": 1 },
+        "sampling_rate": { "type": "number", "default": 0.01 }
+      },
+      "required": ["output_directory"]
+    },
+    "eval_config": {
+      "type": "object",
+      "properties": {
+        "metrics": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+  "required": ["data_config", "training_config"]
+}

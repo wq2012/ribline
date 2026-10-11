@@ -1,0 +1,25 @@
+{
+  "source_dir": "/usr/local/google/home/quanw/Code/siemens_2012/Rib/Data/Centerlines_GT",
+  "jump_mm": 50.0,
+  "changes": {
+    "RIB_007_20091210_bone_1.5_0.6_12_38_interp.xls": [
+      {
+        "original_label": "R07",
+        "n_points": 640,
+        "max_jump_mm": 220.7570280536726,
+        "split_into": [
+          {
+            "label": "R07",
+            "n_points": 327,
+            "z_mean": 184.31219266055047
+          },
+          {
+            "label": "R08",
+            "n_points": 313,
+            "z_mean": 158.92503514376997
+          }
+        ]
+      }
+    ]
+  }
+}
