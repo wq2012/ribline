@@ -1,11 +1,12 @@
 # ribline: 3D Rib Centerline Tracing and Anatomical Labeling in Thoracic CT
 
 [![Python Package](https://github.com/wq2012/ribline/actions/workflows/python-package.yml/badge.svg)](https://github.com/wq2012/ribline/actions/workflows/python-package.yml)
+[![arXiv](https://img.shields.io/badge/arXiv-2610.16047-b31b1b.svg)](https://arxiv.org/abs/2610.16047)
 [![HuggingFace](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Collection-blue)](https://huggingface.co/collections/wq2012/ribline)
 [![PyPI Version](https://img.shields.io/pypi/v/ribline.svg)](https://pypi.python.org/pypi/ribline)
 [![Python Versions](https://img.shields.io/pypi/pyversions/ribline.svg)](https://pypi.org/project/ribline)
 
-**ribline** is an open-source Python library for automatic 3D rib centerline extraction, anatomical rib numbering (`R01..R12, L01..L12`) and sub-voxel refinement in thoracic CT. It combines a lung-apex / vertebral-midline thoracic coordinate frame, a hybrid voxel detector (anatomically anchored Semantic Context Forest + lightweight 3D U-Net), and a global labeling stage (bilateral Viterbi dynamic programming + `RibSnake` refinement). It re-implements and extends ideas from learning-based deformable template matching ([Wu et al., CVPR 2012](#citation)) and Semantic Context Forests ([Wang et al., MICCAI MCV 2013](#citation)). [[Hugging Face collection](https://huggingface.co/collections/wq2012/ribline)]
+**ribline** is an open-source Python library for automatic 3D rib centerline extraction, anatomical rib numbering (`R01..R12, L01..L12`) and sub-voxel refinement in thoracic CT ([Wang, arXiv:2610.16047](#citation)). It combines a lung-apex / vertebral-midline thoracic coordinate frame, a hybrid voxel detector (anatomically anchored Semantic Context Forest + lightweight 3D U-Net), and a global labeling stage (bilateral Viterbi dynamic programming + `RibSnake` refinement). It re-implements and extends ideas from learning-based deformable template matching ([Wu et al., CVPR 2012](#citation)) and Semantic Context Forests ([Wang et al., MICCAI MCV 2013](#citation)). [[arXiv](https://arxiv.org/abs/2610.16047)] [[PDF](https://arxiv.org/pdf/2610.16047)] [[Hugging Face collection](https://huggingface.co/collections/wq2012/ribline)]
 
 > **Version 0.3.0 (revision).** This release fixes the metric definitions (symmetric 10 mm labeling criterion, 50 mm penalty for missed ribs, precision / false positives, `nan` instead of a default 1.0 for undefined groups), ships the U-Net checkpoint that actually produced the reported probability maps, makes the training scripts config-faithful, adds reproducible atlas / ablation / statistics scripts, fixes one merged-rib annotation in the public ground truth, and documents the evaluation-protocol caveats below. All numbers in this README were produced by the scripts named next to them.
 
@@ -276,7 +277,19 @@ Wu et al. 2012 report 89.5 - 95.9 % labeling accuracy on an SCR cohort, Lenga et
 
 ## Citation
 
+If you find **ribline** or its pretrained models useful in your research, please cite:
+
+- **Paper**: [https://arxiv.org/abs/2610.16047](https://arxiv.org/abs/2610.16047) ([PDF](https://arxiv.org/pdf/2610.16047))
+
 ```bibtex
+@article{wang2026hybrid,
+  title={Hybrid Context Forests and Bilateral Viterbi Matching for {3D} Rib Centerline Tracing in {CT}},
+  author={Wang, Quan},
+  journal={arXiv preprint arXiv:2610.16047},
+  year={2026},
+  url={https://arxiv.org/abs/2610.16047}
+}
+
 @inproceedings{wu2012learning,
   title={A learning based deformable template matching method for automatic rib centerline extraction and labeling in {CT} images},
   author={Wu, Dijia and Liu, David and Pusk{\'a}s, Zsolt and Lu, Caiyun and Wimmer, Andreas and Tietjen, Christian and Soza, Grzegorz and Zhou, S Kevin},

@@ -9,6 +9,7 @@ tags:
 - semantic-context-forest
 - 3d-unet
 - computer-vision
+- arxiv:2610.16047
 metrics:
 - chamfer_distance
 - cldice
@@ -17,7 +18,7 @@ metrics:
 
 # ribline-3d-ct-centerline: Pretrained Semantic Context Forests, 3D U-Net and Statistical Rib Cage Atlas
 
-Official checkpoints for **[ribline](https://github.com/wq2012/ribline)** (v0.3.0), a hybrid machine-learning / deformable-topology pipeline for automatic 3D rib centerline extraction and anatomical numbering (`R01..R12, L01..L12`) in thoracic CT, part of the **[ribline Hugging Face Collection](https://huggingface.co/collections/wq2012/ribline)**:
+Official checkpoints for **[ribline](https://github.com/wq2012/ribline)** (v0.3.0), a hybrid machine-learning / deformable-topology pipeline for automatic 3D rib centerline extraction and anatomical numbering (`R01..R12, L01..L12`) in thoracic CT, described in **[Hybrid Context Forests and Bilateral Viterbi Matching for 3D Rib Centerline Tracing in CT](https://arxiv.org/abs/2610.16047)** ([PDF](https://arxiv.org/pdf/2610.16047)) and part of the **[ribline Hugging Face Collection](https://huggingface.co/collections/wq2012/ribline)**:
 
 | Hugging Face Repository | Model Variant | 12-Scan LCD (mm) | 12-Scan Acc (%) | 5-Fold CV LCD (mm) | 5-Fold CV Acc (%) |
 | :--- | :--- | :---: | :---: | :---: | :---: |
@@ -101,7 +102,17 @@ See the GitHub README for the full inference / Stage-3 / evaluation commands.
 
 ## Citation
 
+- **Paper**: [https://arxiv.org/abs/2610.16047](https://arxiv.org/abs/2610.16047) ([PDF](https://arxiv.org/pdf/2610.16047))
+
 ```bibtex
+@article{wang2026hybrid,
+  title={Hybrid Context Forests and Bilateral Viterbi Matching for {3D} Rib Centerline Tracing in {CT}},
+  author={Wang, Quan},
+  journal={arXiv preprint arXiv:2610.16047},
+  year={2026},
+  url={https://arxiv.org/abs/2610.16047}
+}
+
 @inproceedings{wu2012learning,
   title={A learning based deformable template matching method for automatic rib centerline extraction and labeling in {CT} images},
   author={Wu, Dijia and Liu, David and Pusk{\'a}s, Zsolt and Lu, Caiyun and Wimmer, Andreas and Tietjen, Christian and Soza, Grzegorz and Zhou, S Kevin},
