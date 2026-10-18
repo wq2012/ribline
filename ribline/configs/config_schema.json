@@ -9,9 +9,10 @@
         "image_directory": { "type": "string" },
         "centerline_directory": { "type": "string" },
         "split_file": { "type": "string" },
+        "augmentation": { "type": "boolean", "default": false },
         "select_files": {
-            "type": "array",
-            "items": { "type": "string" }
+          "type": "array",
+          "items": { "type": "string" }
         }
       },
       "required": ["image_directory"]
@@ -20,8 +21,9 @@
       "type": "object",
       "properties": {
         "n_estimators": { "type": "integer", "default": 100 },
-        "max_depth": { "type": "integer" },
+        "max_depth": { "type": ["integer", "null"] },
         "n_jobs": { "type": "integer", "default": -1 },
+        "base_filters": { "type": "integer", "default": 16 },
         "dtype": { "type": "string", "enum": ["float32", "bfloat16"], "default": "float32" }
       }
     },
@@ -29,10 +31,76 @@
       "type": "object",
       "properties": {
         "output_directory": { "type": "string" },
+        "pass1_directory": { "type": "string" },
         "num_passes": { "type": "integer", "default": 1 },
-        "sampling_rate": { "type": "number", "default": 0.01 }
+        "sampling_rate": { "type": "number", "default": 0.01 },
+        "samples_per_volume": { "type": "integer", "default": 2000 },
+        "epochs": { "type": "integer", "default": 20 },
+        "batch_size": { "type": "integer", "default": 2 },
+        "learning_rate": { "type": "number", "default": 0.001 },
+        "num_workers": { "type": "integer", "default": 4 },
+        "mask_cache_dir": { "type": "string" },
+        "torch_threads": { "type": "integer" },
+        "seed": { "type": ["integer", "null"] }
       },
       "required": ["output_directory"]
+    },
+    "feature_config": {
+      "type": "object",
+      "properties": {
+        "scales": {
+          "type": "array",
+          "items": { "type": "number" },
+          "default": [1.0, 2.0, 4.0]
+        },
+        "rsid_params": {
+          "type": ["object", "null"],
+          "properties": {
+            "num_pairs": { "type": "integer" },
+            "max_offset": { "type": "integer" },
+            "seed": { "type": "integer", "default": 42 }
+          }
+        },
+        "use_anatomical_features": { "type": "boolean", "default": false },
+        "use_standard_hu": { "type": "boolean", "default": false }
+      }
+    },
+    "feature_config_ctx": {
+      "type": "object",
+      "properties": {
+        "scales": {
+          "type": "array",
+          "items": { "type": "number" },
+          "default": [1.0, 2.0, 4.0]
+        },
+        "rsid_params": {
+          "type": ["object", "null"],
+          "properties": {
+            "num_pairs": { "type": "integer" },
+            "max_offset": { "type": "integer" },
+            "seed": { "type": "integer", "default": 99 }
+          }
+        }
+      }
+    },
+    "extraction_config": {
+      "type": "object",
+      "properties": {
+        "threshold": { "type": "number", "default": 0.45 },
+        "min_length": { "type": "number", "default": 22.0 },
+        "prune_spur_mm": { "type": "number", "default": 8.0 }
+      }
+    },
+    "stage3_config": {
+      "type": "object",
+      "properties": {
+        "threshold": { "type": "number", "default": 0.45 },
+        "rf_weight": { "type": "number", "default": 0.75 },
+        "labeling": { "type": "string", "enum": ["viterbi", "zsort"], "default": "viterbi" },
+        "do_refinement": { "type": "boolean", "default": true },
+        "atlas_path": { "type": ["string", "null"] },
+        "match_tol_mm": { "type": "number", "default": 10.0 }
+      }
     },
     "eval_config": {
       "type": "object",

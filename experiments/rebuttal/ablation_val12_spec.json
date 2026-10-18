@@ -1,0 +1,65 @@
+{
+  "image_dir": "data/vol2mm",
+  "gt_dir": "data/Centerlines_GT_fixed",
+  "subjects_file": "experiments/rebuttal/val_subjects.txt",
+  "output_root": "experiments/rebuttal/ablation_val12",
+  "prob_dirs": {
+    "pass1": "experiments/full_v5/output/predictions",
+    "pass2": "experiments/pass2/output/predictions",
+    "scf_anat": "experiments/80_20_split/scf_anatomical/predictions",
+    "unet": "experiments/sota/full_run_v1/predictions"
+  },
+  "methods": [
+    {
+      "name": "2_pass1_zsort",
+      "prob": "pass1",
+      "labeling": "zsort",
+      "refine": false
+    },
+    {
+      "name": "3_pass2_zsort",
+      "prob": "pass2",
+      "labeling": "zsort",
+      "refine": false
+    },
+    {
+      "name": "4_scf_anat_stage3",
+      "prob": "scf_anat",
+      "labeling": "viterbi",
+      "refine": true
+    },
+    {
+      "name": "5_pass2_stage3",
+      "prob": "pass2",
+      "labeling": "viterbi",
+      "refine": true
+    },
+    {
+      "name": "6_unet_zsort",
+      "prob": "unet",
+      "labeling": "zsort",
+      "refine": false
+    },
+    {
+      "name": "7_unet_stage3",
+      "prob": "unet",
+      "labeling": "viterbi",
+      "refine": true
+    },
+    {
+      "name": "8_hybrid_viterbi_nosnake",
+      "prob": "unet",
+      "rf_prob": "scf_anat",
+      "labeling": "viterbi",
+      "refine": false
+    },
+    {
+      "name": "9_hybrid_full",
+      "prob": "unet",
+      "rf_prob": "scf_anat",
+      "labeling": "viterbi",
+      "refine": true
+    }
+  ],
+  "reference": "9_hybrid_full"
+}

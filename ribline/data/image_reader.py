@@ -123,6 +123,38 @@ def read_analyze75_numpy(path):
     
     return image
 
+SUPPORTED_IMAGE_EXTENSIONS = (".nii.gz", ".nii", ".img", ".hdr", ".mhd", ".nrrd")
+
+
+def strip_image_extension(filename: str):
+    """Returns ``(subject_id, ext)`` if ``filename`` has a supported volume extension, else ``(None, None)``."""
+    for ext in SUPPORTED_IMAGE_EXTENSIONS:
+        if filename.endswith(ext):
+            return filename[: -len(ext)], ext
+    return None, None
+
+
+def resolve_subject_image_path(image_dir: str, subject_id: str) -> str:
+    """Resolves the path to a subject's 3D volume across supported formats.
+
+    Searches for ``<subject_id>`` with extensions ``.img``, ``.hdr``, ``.nii.gz``,
+    ``.nii``, ``.mhd``, and ``.nrrd`` in ``image_dir``. If none exist on disk,
+    returns ``os.path.join(image_dir, f"{subject_id}.img")`` as fallback path.
+    """
+    if os.path.isfile(subject_id):
+        return subject_id
+    if image_dir:
+        direct = os.path.join(image_dir, subject_id)
+        if os.path.isfile(direct):
+            return direct
+        for ext in (".img", ".hdr", ".nii.gz", ".nii", ".mhd", ".nrrd"):
+            cand = os.path.join(image_dir, f"{subject_id}{ext}")
+            if os.path.exists(cand):
+                return cand
+        return os.path.join(image_dir, f"{subject_id}.img")
+    return f"{subject_id}.img"
+
+
 def load_image(path):
     """
     Robust image loader that attempts SimpleITK first, then falls back to custom Analyze reader.

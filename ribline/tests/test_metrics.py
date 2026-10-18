@@ -77,6 +77,10 @@ class TestCorrectedMetrics(unittest.TestCase):
         self.assertAlmostEqual(m["label_acc_all"], 0.75)
         self.assertAlmostEqual(m["detection_recall_onesided"], 1.0)
         self.assertAlmostEqual(m["detection_recall"], 0.75)
+        # One-sided precision vs symmetric precision
+        self.assertAlmostEqual(m["curve_precision"], 1.0)
+        self.assertAlmostEqual(m["curve_precision_symmetric"], 0.75)
+        self.assertEqual(m["num_false_positive_curves_symmetric"], 1)
         # One-sided mode reproduces the legacy behaviour
         m1 = evaluate_subject_ribs(gt, pred, match_tol_mm=10.0, symmetric_criterion=False)
         self.assertAlmostEqual(m1["label_acc_all"], 1.0)

@@ -8,7 +8,7 @@ import scipy.ndimage as ndi
 import SimpleITK as sitk
 
 from ribline.data.dataset import RibDataset
-from ribline.data.image_reader import load_image
+from ribline.data.image_reader import load_image, resolve_subject_image_path
 from ribline.model.anatomy import extract_thoracic_frame, standardize_hu
 from ribline.model.features import FeatureExtractor
 from ribline.model.forest import RibForest
@@ -134,7 +134,7 @@ def inference_pass2(config_path: str):
             try:
                 image, _, _ = dataset.load_item(i)
             except Exception:
-                img_path = os.path.join(image_dir, f"{subject_id}.img")
+                img_path = resolve_subject_image_path(image_dir, subject_id)
                 image = load_image(img_path)
 
             origin = image.GetOrigin()

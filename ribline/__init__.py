@@ -1,10 +1,16 @@
 """RibLine: 3D Rib Centerline Tracing and Anatomical Labeling in Medical Images."""
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 from ribline.data.centerline_parser import parse_rib_xls
 from ribline.data.dataset import RibDataset
-from ribline.data.image_reader import load_image, read_analyze75_header, read_analyze75_numpy
+from ribline.data.image_reader import (
+    load_image,
+    read_analyze75_header,
+    read_analyze75_numpy,
+    resolve_subject_image_path,
+)
+from ribline.hub import download_pretrained_models, load_pretrained_models
 from ribline.model.anatomy import (
     RibCageStatisticalAtlas,
     extract_thoracic_frame,
@@ -24,8 +30,13 @@ from ribline.model.metrics import (
 )
 from ribline.model.reconstruction import CenterlineExtractor
 from ribline.model.refinement import DeformableRibRefiner, RibSnake
-from ribline.model.topology import RibTopologyMatcher
-from ribline.model.unet.model import RibUNet, RibUNet3D
+from ribline.model.topology import BilateralViterbiLabeler, RibTopologyMatcher
+
+try:
+    from ribline.model.unet.model import RibUNet, RibUNet3D
+except ImportError:  # pragma: no cover - optional when running CPU-only SCF without torch
+    RibUNet = None
+    RibUNet3D = None
 
 __all__ = [
     "__version__",
@@ -34,6 +45,9 @@ __all__ = [
     "load_image",
     "read_analyze75_header",
     "read_analyze75_numpy",
+    "resolve_subject_image_path",
+    "download_pretrained_models",
+    "load_pretrained_models",
     "RibCageStatisticalAtlas",
     "extract_thoracic_frame",
     "get_anatomical_rib_mask",
@@ -51,7 +65,7 @@ __all__ = [
     "aggregate_subject_metrics",
     "CenterlineExtractor",
     "RibTopologyMatcher",
+    "BilateralViterbiLabeler",
     "RibSnake",
     "DeformableRibRefiner",
 ]
-

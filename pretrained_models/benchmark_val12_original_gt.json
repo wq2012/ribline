@@ -1,6 +1,6 @@
 {
   "config": {
-    "gt_dir": "/usr/local/google/home/quanw/Code/siemens_2012/Rib/Data/Centerlines_GT",
+    "gt_dir": "data/Centerlines_GT",
     "subjects": [
       "R3_anon_0002713245_0002",
       "RIB_007_20091210_bone_1.5_0.6_12_38",
@@ -22,14 +22,14 @@
     "seed": 0,
     "exclude_ribs": {},
     "methods": {
-      "2_pass1_zsort": "/usr/local/google/home/quanw/Code/siemens_2012/Rib/experiments/rebuttal/ablation_val12/2_pass1_zsort",
-      "3_pass2_zsort": "/usr/local/google/home/quanw/Code/siemens_2012/Rib/experiments/rebuttal/ablation_val12/3_pass2_zsort",
-      "4_scf_anat_stage3": "/usr/local/google/home/quanw/Code/siemens_2012/Rib/experiments/rebuttal/ablation_val12/4_scf_anat_stage3",
-      "5_pass2_stage3": "/usr/local/google/home/quanw/Code/siemens_2012/Rib/experiments/rebuttal/ablation_val12/5_pass2_stage3",
-      "6_unet_zsort": "/usr/local/google/home/quanw/Code/siemens_2012/Rib/experiments/rebuttal/ablation_val12/6_unet_zsort",
-      "7_unet_stage3": "/usr/local/google/home/quanw/Code/siemens_2012/Rib/experiments/rebuttal/ablation_val12/7_unet_stage3",
-      "8_hybrid_viterbi_nosnake": "/usr/local/google/home/quanw/Code/siemens_2012/Rib/experiments/rebuttal/ablation_val12/8_hybrid_viterbi_nosnake",
-      "9_hybrid_full": "/usr/local/google/home/quanw/Code/siemens_2012/Rib/experiments/rebuttal/ablation_val12/9_hybrid_full"
+      "2_pass1_zsort": "experiments/rebuttal/ablation_val12/2_pass1_zsort",
+      "3_pass2_zsort": "experiments/rebuttal/ablation_val12/3_pass2_zsort",
+      "4_scf_anat_stage3": "experiments/rebuttal/ablation_val12/4_scf_anat_stage3",
+      "5_pass2_stage3": "experiments/rebuttal/ablation_val12/5_pass2_stage3",
+      "6_unet_zsort": "experiments/rebuttal/ablation_val12/6_unet_zsort",
+      "7_unet_stage3": "experiments/rebuttal/ablation_val12/7_unet_stage3",
+      "8_hybrid_viterbi_nosnake": "experiments/rebuttal/ablation_val12/8_hybrid_viterbi_nosnake",
+      "9_hybrid_full": "experiments/rebuttal/ablation_val12/9_hybrid_full"
     }
   },
   "summary": {

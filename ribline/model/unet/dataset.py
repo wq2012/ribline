@@ -105,18 +105,34 @@ class RibDLDataset(Dataset):
         img = img * scale
         return {'image': img.contiguous(), 'mask': mask.contiguous()}
 
+    def _extract_patch(self, img, mask, rng=np.random):
+        """Alias for ``_sample_patch_random`` with automatic small-volume zero padding."""
+        return self._sample_patch_random(img, mask, rng=rng)
+
     def _sample_patch_random(self, img, mask, rng=np.random):
         """
         Samples a 3D patch.
         Strategy: 
+        - Zero-pads any dimension smaller than ``self.patch_size``.
         - 70% chance to center on a random foreground voxel.
         - 30% chance to be completely random.
         """
         z_dim, y_dim, x_dim = img.shape
-        pz, py, px = self.patch_size
+        pz, py, px = int(self.patch_size[0]), int(self.patch_size[1]), int(self.patch_size[2])
         
-        # Padding if volume is smaller than patch
-        # (Assuming volumes are large enough for now, otherwise crash)
+        # Zero-pad if volume is smaller than patch_size along any axis
+        pad_z = max(0, pz - z_dim)
+        pad_y = max(0, py - y_dim)
+        pad_x = max(0, px - x_dim)
+        if pad_z > 0 or pad_y > 0 or pad_x > 0:
+            pad_width = (
+                (pad_z // 2, pad_z - pad_z // 2),
+                (pad_y // 2, pad_y - pad_y // 2),
+                (pad_x // 2, pad_x - pad_x // 2),
+            )
+            img = np.pad(img, pad_width, mode="constant", constant_values=0.0)
+            mask = np.pad(mask, pad_width, mode="constant", constant_values=0.0)
+            z_dim, y_dim, x_dim = img.shape
         
         # Decide center
         is_foreground = rng.rand() < 0.7
@@ -127,9 +143,9 @@ class RibDLDataset(Dataset):
             cz, cy, cx = foreground_indices[center_idx]
             
             # Add random jitter
-            dz = rng.randint(-pz//4, pz//4)
-            dy = rng.randint(-py//4, py//4)
-            dx = rng.randint(-px//4, px//4)
+            dz = rng.randint(-pz//4, max(1, pz//4))
+            dy = rng.randint(-py//4, max(1, py//4))
+            dx = rng.randint(-px//4, max(1, px//4))
             
             sz = int(np.clip(cz + dz - pz//2, 0, z_dim - pz))
             sy = int(np.clip(cy + dy - py//2, 0, y_dim - py))
@@ -149,3 +165,6 @@ class RibDLDataset(Dataset):
             'image': torch.from_numpy(img_patch).unsqueeze(0), # (1, D, H, W)
             'mask': torch.from_numpy(mask_patch).unsqueeze(0)  # (1, D, H, W)
         }
+
+
+RibPatchDataset3D = RibDLDataset

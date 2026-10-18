@@ -568,3 +568,6 @@ class RibTopologyMatcher:
             for idx, pts in enumerate(hemi[side][:12]):
                 out[f"{side}{idx + 1:02d}"] = pts
         return out
+
+
+BilateralViterbiLabeler = RibTopologyMatcher

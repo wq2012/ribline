@@ -39,10 +39,10 @@ All models were trained on the **47 annotated training scans** (1,116 ribs) of t
 | :--- | :--- | :--- |
 | `rib_forest_pass1.joblib` + `feature_config_pass1.json` | Pass-1 forest | 120 trees, 228 features: raw intensity, 27 multi-scale Gaussian derivative features (sigma 1 / 2 / 4 mm: smoothed, gradient magnitude, 6 second derivatives, Laplacian), 200 RSID pairs with offsets in [-20, 20] voxels (+/-40 mm). |
 | `rib_forest_pass2.joblib` + `feature_config_img.json` + `feature_config_ctx.json` | Pass-2 auto-context forest | 100 trees, 306 features = 228 Pass-1 features + 28 multi-scale features of the Pass-1 probability map + 50 random-shift probability differences in [-40, 40] voxels (+/-80 mm). Trained on Pass-1 maps of an earlier Pass-1 forest; ablation baseline only. |
-| `rib_forest_anatomical.joblib` + `feature_config_anatomical.json` | Anatomically anchored SCF | 150 trees, max depth 24, 286 features: HU-standardised 28 differential features, a diagonal-curvature tubularity proxy per scale (no Hessian eigen-decomposition / Frangi filter), canonical coordinates `|u|, u, v, w`, lung distance, 250 RSID pairs in [-12, 12] voxels (+/-24 mm). |
+| `rib_forest_anatomical.joblib` + `feature_config_anatomical.json` | Anatomically anchored SCF | 150 trees, max depth 24, 286 features: HU-standardized 28 differential features, a diagonal-curvature tubularity proxy per scale (no Hessian eigen-decomposition / Frangi filter), canonical coordinates `|u|, u, v, w`, lung distance, 250 RSID pairs in [-12, 12] voxels (+/-24 mm). |
 | `rib_unet_3d.pth` | 3D U-Net | Plain 3-level U-Net (16 -> 32 -> 64, Conv-GroupNorm-ReLU x2 per level, no residual blocks), 339,889 parameters. Input: per-volume z-score of raw stored intensities. 64^3 patches, 0.5 soft-Dice + 0.5 BCE, Adam 1e-3, batch 2, 8 patches / scan / epoch, 20 epochs, no augmentation (`train_config_unet.json`). |
 | `rib_atlas.joblib` | 24-rib statistical atlas | Mean canonical curves (80 points per rib), 5-D descriptor mean / SD, inter-rib spacing statistics, 15,000-point slant-correction cloud. `python -m ribline.scripts.build_atlas` on the 47 training scans reproduces it exactly. |
-| `benchmark_val12_fixed_gt.json`, `benchmark_val12_original_gt.json`, `benchmark_train47.json`, `benchmark_cv5.json` | Evaluation reports | Per-rib and per-subject metrics of all ablation rows on the 12 eval scans, the 47 training scans, and the 59-scan 5-fold CV with bootstrap CIs and paired tests. |
+| `benchmark_val12_fixed_gt.json`, `benchmark_val12_original_gt.json`, `benchmark_gt_original_excl_rib007_R07.json`, `benchmark_noSko.json`, `benchmark_train47.json`, `benchmark_cv5.json` | Evaluation reports | Per-rib and per-subject metrics of all ablation rows on the 12 eval scans (including GT-sensitivity variants), the 47 training scans, and the 59-scan 5-fold CV with bootstrap CIs and paired tests. |
 | `polar_stats_all59.json`, `gt_fix_log.json`, `train_config_unet.json` | Statistics / provenance | Frame statistics on all 59 scans; log of the single ground-truth fix; U-Net training recipe. |
 
 ---
@@ -57,16 +57,16 @@ All models were trained on the **47 annotated training scans** (1,116 ribs) of t
 
 Source: `benchmark_val12_fixed_gt.json`, produced by `python -m ribline.scripts.run_ablation` with the released code.
 
-| Method | LCD (mm) | 95 % CI | lab. clDice 3 / 4 mm | Acc all | Acc 1st | Acc 2-11 | Acc 12th | Recall | Precision (FP) | NLD |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| RF Pass-1 + Z-sort | 14.10 +/- 11.10 | [7.96, 20.46] | 0.548 / 0.606 | 64.3 % | 79.2 % | 62.9 % | 63.6 % | 91.3 % | 95.5 % (13) | 0.264 |
-| SCF Pass-2 + Z-sort | 21.30 +/- 13.33 | [13.79, 28.67] | 0.416 / 0.452 | 43.0 % | 45.8 % | 44.2 % | 27.3 % | 76.2 % | 100.0 % (0) | 0.254 |
-| SCF Pass-2 + Stage 3 | 9.36 +/- 10.57 | [4.24, 16.19] | 0.683 / 0.720 | 71.0 % | 54.2 % | 73.8 % | 59.1 % | 78.0 % | 99.6 % (1) | 0.226 |
-| Anatomical SCF + Stage 3 | 2.88 +/- 1.32 | [2.23, 3.73] | 0.845 / 0.915 | 95.1 % | 91.7 % | 95.0 % | 100.0 % | 95.1 % | 99.7 % (1) | 0.088 |
-| 3D U-Net + Z-sort | 7.57 +/- 7.43 | [3.97, 12.17] | 0.710 / 0.813 | 83.6 % | 70.8 % | 86.7 % | 63.6 % | 92.0 % | 100.0 % (0) | 0.147 |
-| 3D U-Net + Stage 3 | 3.40 +/- 1.99 | [2.42, 4.64] | 0.835 / 0.902 | 92.0 % | 66.7 % | 95.4 % | 81.8 % | 93.0 % | 100.0 % (0) | 0.121 |
-| Hybrid + Viterbi (no RibSnake) | 2.85 +/- 1.70 | [2.07, 3.95] | 0.872 / 0.933 | 95.8 % | 83.3 % | 97.5 % | 90.9 % | 95.8 % | 99.6 % (1) | 0.147 |
-| **Hybrid + full Stage 3** | **2.05 +/- 0.48** | [1.80, 2.33] | **0.886 / 0.945** | **97.2 %** (278/286) | **91.7 %** | **97.5 %** | **100.0 %** | **97.2 %** | **100.0 % (0)** | **0.068** |
+| Method | LCD (mm) | 95 % CI | UCD (mm) | lab. clDice 3 / 4 mm | Acc all | Acc 1st | Acc 2-11 | Acc 12th | Recall | Precision (FP) | NLD |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| RF Pass-1 + Z-sort | 14.10 +/- 11.10 | [7.96, 20.46] | 3.31 | 0.548 / 0.606 | 64.3 % | 79.2 % | 62.9 % | 63.6 % | 91.3 % | 95.5 % (13) | 0.264 |
+| SCF Pass-2 + Z-sort | 21.30 +/- 13.33 | [13.79, 28.67] | 4.16 | 0.416 / 0.452 | 43.0 % | 45.8 % | 44.2 % | 27.3 % | 76.2 % | 100.0 % (0) | 0.254 |
+| SCF Pass-2 + Stage 3 | 9.36 +/- 10.57 | [4.24, 16.19] | 3.73 | 0.683 / 0.720 | 71.0 % | 54.2 % | 73.8 % | 59.1 % | 78.0 % | 99.6 % (1) | 0.226 |
+| Anatomical SCF + Stage 3 | 2.88 +/- 1.32 | [2.23, 3.73] | 2.41 | 0.845 / 0.915 | 95.1 % | 91.7 % | 95.0 % | 100.0 % | 95.1 % | 99.7 % (1) | 0.088 |
+| 3D U-Net + Z-sort | 7.57 +/- 7.43 | [3.97, 12.17] | 2.75 | 0.710 / 0.813 | 83.6 % | 70.8 % | 86.7 % | 63.6 % | 92.0 % | 100.0 % (0) | 0.147 |
+| 3D U-Net + Stage 3 | 3.40 +/- 1.99 | [2.42, 4.64] | 2.30 | 0.835 / 0.902 | 92.0 % | 66.7 % | 95.4 % | 81.8 % | 93.0 % | 100.0 % (0) | 0.121 |
+| Hybrid + Viterbi (no RibSnake) | 2.85 +/- 1.70 | [2.07, 3.95] | 2.11 | 0.872 / 0.933 | 95.8 % | 83.3 % | 97.5 % | 90.9 % | 95.8 % | 99.6 % (1) | 0.147 |
+| **Hybrid + full Stage 3** | **2.05 +/- 0.48** | [1.80, 2.33] | **1.91** | **0.886 / 0.945** | **97.2 %** (278/286) | **91.7 %** | **97.5 %** | **100.0 %** | **97.2 %** | **100.0 % (0)** | **0.068** |
 
 On the unmodified ground truth (285 ribs): 2.08 +/- 0.46 mm, 96.8 % (276/285). All 8 ribs failing the symmetric criterion are partial traces (prediction lies on the rib, but covers only part of it), not label swaps.
 
@@ -74,7 +74,7 @@ On the unmodified ground truth (285 ribs): 2.08 +/- 0.46 mm, 96.8 % (276/285). A
 
 ## Limitations
 
-- 60-scan single-source data set at 2 mm; no acquisition metadata; untested outside SCR.
+- 60-scan single-source dataset at 2 mm; no acquisition metadata; untested outside SCR.
 - 12-scan non-random evaluation set; Wilson CI for accuracy 94.6 - 98.6 %; subject-level failure rate only bounded below ~25 %.
 - Stage-3 constants fitted with access to the evaluation scans (see caveat).
 - Known annotation issues (merged `R07` in `RIB_007`, inconsistent 12th ribs); possible patient overlap `Bro_004029` (train) / `Sko_004029` (eval) cannot be excluded.
@@ -83,6 +83,18 @@ On the unmodified ground truth (285 ribs): 2.08 +/- 0.46 mm, 96.8 % (276/285). A
 ---
 
 ## Quick start
+
+```python
+from ribline import load_pretrained_models
+
+# Automatically downloads and instantiates the 24-rib atlas, Anatomical SCF, and 3D U-Net
+models = load_pretrained_models("wq2012/ribline-3d-ct-centerline", device="cpu")
+atlas = models["atlas"]
+rf_anat = models["forest"]
+unet = models["unet"]
+```
+
+Or load individual local checkpoint files directly:
 
 ```python
 import torch

@@ -8,7 +8,7 @@ import numpy as np
 import SimpleITK as sitk
 
 from ribline.data.centerline_parser import parse_rib_xls
-from ribline.data.image_reader import load_image
+from ribline.data.image_reader import load_image, resolve_subject_image_path
 from ribline.model.anatomy import extract_thoracic_frame
 from ribline.model.metrics import (
     chamfer_distance,
@@ -60,6 +60,7 @@ def evaluate(config_path: str, force_extract=False) -> dict:
     chamfer_scores = []
     labeled_chamfer_scores = []
     dice_scores = []
+    labeled_cldice_scores = []
     cldice_scores = []
     acc_all_scores = []
 
@@ -69,9 +70,7 @@ def evaluate(config_path: str, force_extract=False) -> dict:
         spacing = img.GetSpacing()
         origin = img.GetOrigin()
 
-        img_path = os.path.join(image_dir, f"{subject}.hdr")
-        if not os.path.exists(img_path):
-            img_path = os.path.join(image_dir, f"{subject}.img")
+        img_path = resolve_subject_image_path(image_dir, subject)
         ct_arr = None
         if os.path.exists(img_path):
             orig_img = load_image(img_path)
@@ -134,6 +133,7 @@ def evaluate(config_path: str, force_extract=False) -> dict:
         cd = sub_eval["unlabeled_chamfer_mm"]
         lcd = sub_eval["labeled_chamfer_mm"]
         dice = sub_eval.get("dilated_dice_3mm", 0.0)
+        lcld3 = sub_eval["labeled_cldice_3mm"]
         cld3 = sub_eval["unlabeled_cldice_3mm"]
         acc_a = sub_eval["label_acc_all"]
         detected_ribs = int(round(sub_eval["detection_recall"] * sub_eval["num_gt_ribs"]))
@@ -141,12 +141,14 @@ def evaluate(config_path: str, force_extract=False) -> dict:
         chamfer_scores.append(cd)
         labeled_chamfer_scores.append(lcd)
         dice_scores.append(dice)
+        labeled_cldice_scores.append(lcld3)
         cldice_scores.append(cld3)
         acc_all_scores.append(acc_a)
 
         print(
             f"{subject}: LabeledCD={lcd:.2f}mm, UnlabeledCD={cd:.2f}mm, "
-            f"clDice={cld3:.3f}, Dice3mm={dice:.3f}, AccA={acc_a:.3f} "
+            f"LabeledClDice3mm={lcld3:.3f}, UnlabeledClDice3mm={cld3:.3f}, "
+            f"Dice3mm={dice:.3f}, AccA={acc_a:.3f} "
             f"({detected_ribs}/{sub_eval['num_gt_ribs']})"
         )
 
@@ -161,11 +163,12 @@ def evaluate(config_path: str, force_extract=False) -> dict:
 
     if chamfer_scores:
         print("-" * 50)
-        print(f"Mean Labeled Chamfer (mm):   {np.mean(labeled_chamfer_scores):.4f}")
-        print(f"Mean Unlabeled Chamfer (mm): {np.mean(chamfer_scores):.4f}")
-        print(f"Mean clDice (3mm):           {np.mean(cldice_scores):.4f}")
-        print(f"Mean Dilated Dice (3mm):     {np.mean(dice_scores):.4f}")
-        print(f"Mean Label Accuracy (All):   {np.mean(acc_all_scores):.4f}")
+        print(f"Mean Labeled Chamfer (mm):    {np.mean(labeled_chamfer_scores):.4f}")
+        print(f"Mean Unlabeled Chamfer (mm):  {np.mean(chamfer_scores):.4f}")
+        print(f"Mean Labeled clDice (3mm):    {np.mean(labeled_cldice_scores):.4f}")
+        print(f"Mean Unlabeled clDice (3mm):  {np.mean(cldice_scores):.4f}")
+        print(f"Mean Dilated Dice (3mm):      {np.mean(dice_scores):.4f}")
+        print(f"Mean Label Accuracy (All):    {np.mean(acc_all_scores):.4f}")
 
     report_path = os.path.join(
         os.path.dirname(pred_dir), "evaluation_metrics.json"

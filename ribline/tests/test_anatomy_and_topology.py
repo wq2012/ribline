@@ -182,8 +182,45 @@ class TestAnatomyAndTopology(unittest.TestCase):
         valid_cfg = {
             "data_config": {"image_directory": "/tmp/vol2mm"},
             "training_config": {"output_directory": "/tmp/out"},
+            "feature_config": {
+                "scales": [1.0, 2.0, 4.0],
+                "rsid_params": {"num_pairs": 250, "max_offset": 12, "seed": 42},
+                "use_anatomical_features": True,
+                "use_standard_hu": True,
+            },
+            "extraction_config": {"threshold": 0.45, "min_length": 22.0},
+            "stage3_config": {"hybrid_rf_weight": 0.75, "labeling": "viterbi", "refine": True},
         }
         jsonschema.validate(instance=valid_cfg, schema=schema)
+
+    def test_aliases_anisotropic_frame_and_cli_scripts(self):
+        import subprocess
+        import sys
+        from ribline import BilateralViterbiLabeler
+
+        self.assertIs(BilateralViterbiLabeler, RibTopologyMatcher)
+
+        ct, _, _, _, origin = self._make_synthetic_thorax()
+        frame_aniso = extract_thoracic_frame(ct, spacing=(3.0, 1.5, 2.0), origin=origin)
+        self.assertIn("dist_lung_sub", frame_aniso)
+        self.assertEqual(frame_aniso["dist_lung_sub"].shape, ct[::2, ::2, ::2].shape)
+
+        scripts = [
+            "ribline.scripts.train_anatomical_scf",
+            "ribline.scripts.train_unet",
+            "ribline.scripts.infer_anatomical_scf",
+            "ribline.scripts.infer_unet",
+            "ribline.scripts.run_stage3",
+            "ribline.scripts.run_cv5",
+        ]
+        for mod in scripts:
+            proc = subprocess.run(
+                [sys.executable, "-m", mod, "--help"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, f"{mod} --help failed: {proc.stderr}")
 
     def test_markdown_no_latex_math(self):
         import re
@@ -223,6 +260,56 @@ class TestAnatomyAndTopology(unittest.TestCase):
                 stripped,
                 f"Found unescaped underscore outside code/URLs in {md_path}",
             )
+
+    def test_fov_truncated_superior_flag(self):
+        ct, _, _, spacing, origin = self._make_synthetic_thorax()
+        frame_full = extract_thoracic_frame(ct, spacing=spacing, origin=origin)
+        self.assertIn("z_top_margin_mm", frame_full)
+        self.assertIn("fov_truncated_superior", frame_full)
+        self.assertFalse(frame_full["fov_truncated_superior"])
+        self.assertGreaterEqual(frame_full["z_top_margin_mm"], 15.0)
+
+        # Crop superior slices right at lung apex (z <= 125 -> 126 slices)
+        ct_trunc = ct[:126, :, :]
+        frame_trunc = extract_thoracic_frame(ct_trunc, spacing=spacing, origin=origin)
+        self.assertTrue(frame_trunc["fov_truncated_superior"])
+        self.assertLess(frame_trunc["z_top_margin_mm"], 15.0)
+
+    def test_small_volume_sliding_window_inference(self):
+        from ribline.model.unet.model import RibUNet3D
+        from ribline.pipeline.inference_unet import sliding_window_inference
+
+        model = RibUNet3D(in_channels=1, out_channels=1, base_filters=4)
+        small_vol = np.random.randn(32, 40, 48).astype(np.float32)
+        prob_map = sliding_window_inference(
+            model, small_vol, patch_size=(64, 64, 64), stride=(48, 48, 48), batch_size=2
+        )
+        self.assertEqual(prob_map.shape, (32, 40, 48))
+        self.assertGreaterEqual(float(np.min(prob_map)), 0.0)
+        self.assertLessEqual(float(np.max(prob_map)), 1.0)
+
+    def test_cli_shorthand_flag_aliases(self):
+        import subprocess
+        import sys
+
+        expected_flags = {
+            "ribline.scripts.train_anatomical_scf": ["--out-dir", "--out", "--output-dir"],
+            "ribline.scripts.train_unet": ["--out-dir", "--out", "--output-dir"],
+            "ribline.scripts.infer_anatomical_scf": ["--model", "--checkpoint", "--out-dir", "--out"],
+            "ribline.scripts.infer_unet": ["--model", "--checkpoint", "--out-dir", "--out"],
+            "ribline.scripts.run_stage3": ["--unet-probs", "--scf-probs", "--out", "--out-dir", "--split"],
+            "ribline.scripts.run_cv5": ["--out", "--out-dir", "--output-dir"],
+        }
+        for mod, flags in expected_flags.items():
+            proc = subprocess.run(
+                [sys.executable, "-m", mod, "--help"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, f"{mod} --help failed: {proc.stderr}")
+            for flag in flags:
+                self.assertIn(flag, proc.stdout, f"Flag {flag} missing from {mod} --help")
 
 
 if __name__ == "__main__":

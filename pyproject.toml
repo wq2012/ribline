@@ -1,20 +1,19 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ribline"
-version = "0.3.0"
+version = "0.3.1"
 description = "Hybrid Semantic Context Forests, 3D U-Net, and Kyphosis-Aware Deformable Topology Matching for 3D Rib Centerline Tracing and Anatomical Labeling"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
   {name = "Quan Wang"}
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
     "Topic :: Scientific/Engineering :: Image Processing",
@@ -30,15 +29,23 @@ dependencies = [
     "SimpleITK",
     "networkx",
     "tqdm",
+    "huggingface_hub>=0.20.0",
     "torch>=2.0.0",
 ]
 
 [project.optional-dependencies]
 torch = ["torch>=2.0.0"]
+dev = ["build", "twine"]
 
 [project.scripts]
 ribline-sota = "ribline.pipeline.pipeline_sota:main"
 ribline-evaluate = "ribline.pipeline.evaluate:main"
+ribline-train-scf = "ribline.scripts.train_anatomical_scf:main"
+ribline-train-unet = "ribline.scripts.train_unet:main"
+ribline-infer-scf = "ribline.scripts.infer_anatomical_scf:main"
+ribline-infer-unet = "ribline.scripts.infer_unet:main"
+ribline-stage3 = "ribline.scripts.run_stage3:main"
+ribline-cv5 = "ribline.scripts.run_cv5:main"
 
 [project.urls]
 "Homepage" = "https://github.com/wq2012/ribline"

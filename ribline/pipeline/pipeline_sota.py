@@ -8,7 +8,7 @@ import SimpleITK as sitk
 from tqdm import tqdm
 
 from ribline.data.centerline_parser import parse_rib_xls
-from ribline.data.image_reader import load_image
+from ribline.data.image_reader import load_image, resolve_subject_image_path
 from ribline.model.anatomy import extract_thoracic_frame
 from ribline.model.metrics import evaluate_subject_ribs
 from ribline.model.reconstruction import CenterlineExtractor
@@ -101,9 +101,7 @@ def run_sota_pipeline(
             except FileNotFoundError:
                 pass
 
-        img_path = os.path.join(image_dir, f"{subject_id}.hdr")
-        if not os.path.exists(img_path):
-            img_path = os.path.join(image_dir, f"{subject_id}.img")
+        img_path = resolve_subject_image_path(image_dir, subject_id)
         image_img = load_image(img_path)
         image_arr = sitk.GetArrayFromImage(image_img).astype(np.float32)
 

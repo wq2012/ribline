@@ -8,14 +8,14 @@
 
 **ribline** is an open-source Python library for automatic 3D rib centerline extraction, anatomical rib numbering (`R01..R12, L01..L12`) and sub-voxel refinement in thoracic CT ([Wang, arXiv:2610.16047](#citation)). It combines a lung-apex / vertebral-midline thoracic coordinate frame, a hybrid voxel detector (anatomically anchored Semantic Context Forest + lightweight 3D U-Net), and a global labeling stage (bilateral Viterbi dynamic programming + `RibSnake` refinement). It re-implements and extends ideas from learning-based deformable template matching ([Wu et al., CVPR 2012](#citation)) and Semantic Context Forests ([Wang et al., MICCAI MCV 2013](#citation)). [[arXiv](https://arxiv.org/abs/2610.16047)] [[PDF](https://arxiv.org/pdf/2610.16047)] [[Hugging Face collection](https://huggingface.co/collections/wq2012/ribline)]
 
-> **Version 0.3.0 (revision).** This release fixes the metric definitions (symmetric 10 mm labeling criterion, 50 mm penalty for missed ribs, precision / false positives, `nan` instead of a default 1.0 for undefined groups), ships the U-Net checkpoint that actually produced the reported probability maps, makes the training scripts config-faithful, adds reproducible atlas / ablation / statistics scripts, fixes one merged-rib annotation in the public ground truth, and documents the evaluation-protocol caveats below. All numbers in this README were produced by the scripts named next to them.
+> **Version 0.3.1 (revision).** This release fixes the metric definitions (symmetric 10 mm labeling criterion, 50 mm penalty for missed ribs, precision / false positives, `nan` instead of a default 1.0 for undefined groups), ships the U-Net checkpoint that actually produced the reported probability maps, makes the training scripts config-faithful, adds reproducible atlas / ablation / statistics / 5-fold cross-validation scripts and Hugging Face Hub loaders, fixes one merged-rib annotation in the public ground truth, and documents the evaluation-protocol caveats below. All numbers in this README were produced by the scripts named next to them.
 
 | Component | **ribline** |
 | :--- | :--- |
 | **Voxel detector** | Anatomically anchored SCF (150 trees, 286 features) max-fused with a plain 3-level 3D U-Net (340k parameters) |
 | **Thoracic frame** | Automatic lung apex `Z_apex`, vertebral midline `X_spine(Z)`, kyphosis-aware azimuthal angle (ordering parameter) |
 | **Labeling** | Fragment consolidation + patient-scaled bilateral Viterbi DP with contralateral coupling |
-| **Refinement** | Apical clavicle trimming, terminal-rib template recovery, normal-plane centring (`RibSnake`) |
+| **Refinement** | Apical clavicle trimming, terminal-rib template recovery, normal-plane centering (`RibSnake`) |
 | **Labeled Chamfer distance (12 eval scans, 286 ribs)** | 2.05 +/- 0.48 mm, 95 % bootstrap CI [1.80, 2.33], median 1.89 mm |
 | **Labeled clDice 3 mm / 4 mm** | 0.886 / 0.945 |
 | **Labeling accuracy (symmetric 10 mm)** | 97.2 % (278 / 286 ribs; Wilson 95 % CI 94.6 - 98.6 %) |
@@ -59,9 +59,9 @@ python run_tests.py
 The package supports the **Siemens Corporate Research (SCR) 3D thoracic CT rib centerline benchmark** (60 scans, 2.0 mm isotropic, Analyze-style `.hdr/.img` with 3-line ASCII headers, manual B-spline interpolated centerlines `*_interp.xls`) as well as NIfTI / MetaImage volumes via SimpleITK.
 
 - **Split (`split.json`)**: 48 training scans (47 with annotations, 1,116 ribs; `Gist_p2_19_Anonymous_0015_interp.xls` is empty and skipped) and 12 evaluation scans. **The split is not random**: the 12 evaluation scans are the case-sensitive alphabetical tail of the file list. See [Limitations](#limitations-and-known-issues).
-- **Coordinates**: centerline points are in physical millimetres `(X, Y, Z) = (i_x s_x, i_y s_y, i_z s_z)` with origin (0, 0, 0); `X` right-to-left, `Y` anterior-to-posterior, `Z` inferior-to-superior.
-- **Intensities**: about half of the scans are stored as signed HU and half as unsigned shifted values. `ribline.model.anatomy.standardize_hu` subtracts 1024 when the volume minimum is >= -100 HU. This standardisation is used by the forests and by Stage 3; the U-Net is fed a per-volume z-score of the *raw* stored intensities (see below).
-- **Ground-truth fix**: in `RIB_007_20091210_bone_1.5_0.6_12_38_interp.xls` the label `R07` contains two ribs (640 points with a 220 mm jump; the second curve is the eighth right rib). `python -m ribline.scripts.fix_gt_annotations --gt-dir Data/Centerlines_GT --out-dir Data/Centerlines_GT_fixed` splits it into `R07` / `R08`, touches no other file, and writes `fix_log.json`. The fixed set has 286 evaluation ribs; results on the unmodified ground truth are reported as well.
+- **Coordinates**: centerline points are in physical millimeters `(X, Y, Z) = (i_x s_x, i_y s_y, i_z s_z)` with origin (0, 0, 0); `X` right-to-left, `Y` anterior-to-posterior, `Z` inferior-to-superior.
+- **Intensities**: about half of the scans are stored as signed HU and half as unsigned shifted values. `ribline.model.anatomy.standardize_hu` subtracts 1024 when the volume minimum is >= -100 HU. This standardization is used by the forests and by Stage 3; the U-Net is fed a per-volume z-score of the *raw* stored intensities (see below).
+- **Ground-truth fix**: in `RIB_007_20091210_bone_1.5_0.6_12_38_interp.xls` the label `R07` contains two ribs (640 points with a 220 mm jump; the second curve is the eighth right rib). `python -m ribline.scripts.fix_gt_annotations --gt-dir data/Centerlines_GT --out-dir data/Centerlines_GT_fixed` splits it into `R07` / `R08`, touches no other file, and writes `fix_log.json`. The fixed set has 286 evaluation ribs; results on the unmodified ground truth are reported as well.
 
 ---
 
@@ -82,7 +82,7 @@ All pretrained checkpoints were trained on the 47 annotated training scans only 
 | :--- | :--- | :--- |
 | `rib_forest_pass1.joblib` + `feature_config_pass1.json` | Pass-1 forest | 120 trees, unlimited depth, 228 features: raw intensity, per scale (1, 2, 4 mm) smoothed intensity, gradient magnitude, 6 second derivatives, Laplacian (28), plus 200 RSID pairs with offsets in [-20, 20] voxels (+/-40 mm). Trained with random rigid augmentation. |
 | `rib_forest_pass2.joblib` + `feature_config_img.json` + `feature_config_ctx.json` | Pass-2 auto-context forest | 100 trees, 306 features = the 228 Pass-1 features + 28 multi-scale features of the Pass-1 probability map + 50 random-shift probability differences with offsets in [-40, 40] voxels (+/-80 mm). |
-| `rib_forest_anatomical.joblib` + `feature_config_anatomical.json` | Anatomically anchored SCF | 150 trees, depth 24, 286 features: HU-standardised input, the 28 differential features, a per-scale tubularity proxy from the diagonal second derivatives (no Hessian eigen-decomposition / Frangi filter), canonical coordinates `|u|, u, v, w`, lung distance, and 250 RSID pairs in [-12, 12] voxels (+/-24 mm). |
+| `rib_forest_anatomical.joblib` + `feature_config_anatomical.json` | Anatomically anchored SCF | 150 trees, depth 24, 286 features: HU-standardized input, the 28 differential features, a per-scale tubularity proxy from the diagonal second derivatives (no Hessian eigen-decomposition / Frangi filter), canonical coordinates `|u|, u, v, w`, lung distance, and 250 RSID pairs in [-12, 12] voxels (+/-24 mm). |
 | `rib_unet_3d.pth` | 3D U-Net | Plain 3-level U-Net (16 -> 32 -> 64, Conv-GroupNorm-ReLU x2 per level, **no residual blocks**), 339,889 parameters, 64^3 patches, loss 0.5 soft-Dice + 0.5 BCE, Adam 1e-3, batch 2, 8 patches per scan per epoch, 20 epochs, no augmentation. **This file is the epoch-20 checkpoint** (`md5 9e456ba9ff81c402a58436c666f152ef`) that produced every probability map reported below (re-inference reproduces them with max abs. difference 0). Earlier releases shipped an unrelated mid-run snapshot by mistake. Training recipe: `pretrained_models/train_config_unet.json`. |
 | `rib_atlas.joblib` | 24-rib statistical atlas | Mean canonical curves (80 points), 5-D descriptor statistics, inter-rib spacing statistics and a 15,000-point slant-correction cloud. Re-fitting with `python -m ribline.scripts.build_atlas` on the 47 training scans reproduces this file exactly. |
 | `benchmark_val12_fixed_gt.json`, `benchmark_val12_original_gt.json`, `benchmark_train47.json`, `benchmark_cv5.json` | Evaluation reports | Per-rib / per-subject metrics of all ablation rows on the 12 eval scans (fixed and unmodified GT), the 47 training scans, and the 59-scan 5-fold CV (corrected metrics, bootstrap CIs, paired tests). |
@@ -92,6 +92,18 @@ All pretrained checkpoints were trained on the 47 annotated training scans only 
 
 ## Usage
 
+### Hugging Face Hub Quick Start
+
+```python
+from ribline import load_pretrained_models
+
+# Downloads and instantiates the 24-rib statistical atlas, Anatomical SCF, and 3D U-Net
+models = load_pretrained_models("wq2012/ribline-3d-ct-centerline", device="cpu")
+atlas = models["atlas"]
+scf_forest = models["forest"]
+unet = models["unet"]
+```
+
 ### Python API
 
 ```python
@@ -99,10 +111,10 @@ import numpy as np
 import SimpleITK as sitk
 from ribline import (
     load_image, parse_rib_xls, extract_thoracic_frame, RibCageStatisticalAtlas,
-    CenterlineExtractor, RibTopologyMatcher, RibSnake, evaluate_subject_ribs,
+    CenterlineExtractor, BilateralViterbiLabeler, RibSnake, evaluate_subject_ribs,
 )
 
-ct_img = load_image("Data/vol2mm/pet_ct_bc__eh_Anonymous_0004.hdr")
+ct_img = load_image("data/vol2mm/pet_ct_bc__eh_Anonymous_0004.hdr")
 ct_arr = sitk.GetArrayFromImage(ct_img).astype(np.float32)
 spacing, origin = ct_img.GetSpacing(), ct_img.GetOrigin()
 
@@ -114,10 +126,10 @@ frame = extract_thoracic_frame(ct_arr, spacing=spacing, origin=origin)
 atlas = RibCageStatisticalAtlas.load("ribline/configs/rib_atlas.joblib")
 curves = CenterlineExtractor(threshold=0.45).extract(
     hybrid_prob, spacing=spacing, origin=origin, min_length=22.0, hu_arr=ct_arr, frame=frame, atlas=atlas)
-labeled = RibTopologyMatcher(atlas=atlas).match(curves, frame=frame)
+labeled = BilateralViterbiLabeler(atlas=atlas).match(curves, frame=frame)
 refined = RibSnake(spacing=spacing).refine(labeled, ct_arr, origin=origin, prob_np=hybrid_prob, frame=frame, atlas=atlas)
 
-gt = parse_rib_xls("Data/Centerlines_GT_fixed/pet_ct_bc__eh_Anonymous_0004_interp.xls")
+gt = parse_rib_xls("data/Centerlines_GT_fixed/pet_ct_bc__eh_Anonymous_0004_interp.xls")
 m = evaluate_subject_ribs(gt, refined)   # symmetric 10 mm criterion, 50 mm missing penalty
 print(m["labeled_chamfer_mm"], m["label_acc_all"], m["precision"], m["num_false_positive_curves"])
 ```
@@ -125,33 +137,44 @@ print(m["labeled_chamfer_mm"], m["label_acc_all"], m["precision"], m["num_false_
 ### Command line
 
 ```bash
-# Detector probability maps (any split: val | train | all)
-python -m ribline.pipeline.inference_unet --config experiments/sota/full_config.json \
-    --checkpoint pretrained_models/rib_unet_3d.pth --output probs_unet --split val
-python -m ribline.pipeline.inference --config <anatomical_scf_config.json> --split val --output-dir probs_scf --prob-only
+# 1. Fix the merged-rib annotation in RIB_007 and build the 24-rib statistical atlas
+python -m ribline.scripts.fix_gt_annotations --gt-dir data/Centerlines_GT --out-dir data/Centerlines_GT_fixed
+python -m ribline.scripts.build_atlas --image-dir data/vol2mm --gt-dir data/Centerlines_GT_fixed \
+    --split split.json --out pretrained_models/rib_atlas.joblib
 
-# Stage 3 (hybrid, Viterbi, RibSnake); --labeling zsort / --no-refine give the ablation baselines
-ribline-sota --prob-dir probs_unet --rf-prob-dir probs_scf --image-dir Data/vol2mm \
-    --output-dir centerlines --gt-dir Data/Centerlines_GT_fixed
+# 2. Train the Anatomically Anchored SCF and the 3D U-Net
+python -m ribline.scripts.train_anatomical_scf --image-dir data/vol2mm --gt-dir data/Centerlines_GT_fixed \
+    --split split.json --out-dir pretrained_models
+python -m ribline.scripts.train_unet --image-dir data/vol2mm --gt-dir data/Centerlines_GT_fixed \
+    --split split.json --epochs 20 --out pretrained_models/rib_unet_3d.pth
+# (or from a JSON config: python -m ribline.pipeline.train_unet --config experiments/sota/full_config.json)
 
-# Scoring with CIs and paired tests
-python -m ribline.scripts.benchmark_eval --gt-dir Data/Centerlines_GT_fixed \
-    --method ours=centerlines --out benchmark.json
+# 3. Detector probability maps (any split: val | train | all)
+python -m ribline.scripts.infer_anatomical_scf --model pretrained_models/rib_forest_anatomical.joblib \
+    --image-dir data/vol2mm --split split.json --out-dir predictions/scf_anatomical
+python -m ribline.scripts.infer_unet --model pretrained_models/rib_unet_3d.pth \
+    --image-dir data/vol2mm --split split.json --out-dir predictions/unet
 
-# Training
-python -m ribline.pipeline.train --config <forest_config.json>
-python -m ribline.pipeline.train_pass2 --config <pass2_config.json>
-python -m ribline.pipeline.train_unet --config experiments/sota/full_config.json
-python -m ribline.scripts.build_atlas --image-dir Data/vol2mm --gt-dir Data/Centerlines_GT_fixed --split split.json --out rib_atlas.joblib
+# 4. Stage 3 (hybrid fusion, bilateral Viterbi DP, RibSnake)
+python -m ribline.scripts.run_stage3 --unet-probs predictions/unet --scf-probs predictions/scf_anatomical \
+    --atlas pretrained_models/rib_atlas.joblib --image-dir data/vol2mm --gt-dir data/Centerlines_GT_fixed \
+    --split split.json --out pretrained_models/benchmark_val12_fixed_gt.json
+# (or via console entry point: ribline-sota --prob-dir predictions/unet --rf-prob-dir predictions/scf_anatomical ...)
+
+# 5. Scoring with bootstrap CIs and paired Wilcoxon tests, plus 5-fold cross-validation
+python -m ribline.scripts.benchmark_eval --gt-dir data/Centerlines_GT_fixed \
+    --method ours=predictions/unet_stage3 --out benchmark.json
+python -m ribline.scripts.run_cv5 --image-dir data/vol2mm --gt-dir data/Centerlines_GT_fixed \
+    --folds experiments/cv5/folds.json --out pretrained_models/benchmark_cv5.json
 ```
 
 ---
 
 ## Algorithm (as implemented)
 
-1. **Thoracic frame** (`ribline/model/anatomy.py`): HU standardisation; on a 2x down-sampled grid, torso (> -350 HU), internal air (< -380 HU, opened, <= 4 largest components) = lungs; `Z_apex` = max of per-side 99.5th-percentile lung Z; spine from the bone projection in the posterior 40 % of the AP depth, per-slice median, Gaussian-smoothed. Kyphosis-aware angle `theta = atan2(-(Y - y_c(Z)), |X - x_spine| - 8 mm)` with `y_c(Z) = Y_ant + 0.25 D + 0.16 clip(Z_apex - Z, 0, 220)`. Measured on 1,402 GT ribs of the 59 scans (`python -m ribline.scripts.polar_angle_stats`): `theta_end > theta_start` on 100 %, strictly monotonic on 78.6 % (vs 57.0 % for a torso-centre angle), local reversal > 0.1 rad on 0.6 % (vs 7.6 %). Posterior end of rib 1 lies +11.9 +/- 9.3 mm above `Z_apex`; midline error 2.5 +/- 2.4 mm.
-2. **Detectors** (`ribline/model/features.py`, `ribline/model/unet/`): see the table above. The forests are evaluated on all non-air voxels (`gaussian(HU, 1.2) > -20`), a speed optimisation only; forest training negatives are sampled uniformly over the whole volume.
-3. **Stage 3** (`reconstruction.py`, `topology.py`, `refinement.py`): anatomical mask (bone band, vertebral / sternal corridors, shoulder exclusion, intercostal valley suppression), threshold 0.45, 3D skeleton, graph decomposition, hairpin / height-jump splitting, azimuthal chaining; per-hemithorax candidate consolidation; patient scale `s_Z`; relative Mahalanobis + template unaries; bilateral Viterbi DP with clutter costs and skip penalties, two passes with contralateral coupling; `RibSnake` (apical trimming at 0.55 W, terminal-rib recovery, 5 iterations of normal-plane centring clamped to 1.6 mm, cubic smoothing spline). Output curves have 15 to ~200 points (median ~150).
+1. **Thoracic frame** (`ribline/model/anatomy.py`): HU standardization; on a 2x down-sampled grid, torso (> -350 HU), internal air (< -380 HU, opened, <= 4 largest components) = lungs; `Z_apex` = max of per-side 99.5th-percentile lung Z; spine from the bone projection in the posterior 40 % of the AP depth, per-slice median, Gaussian-smoothed. Kyphosis-aware angle `theta = atan2(-(Y - y_c(Z)), |X - x_spine| - 8 mm)` with `y_c(Z) = Y_ant + 0.25 D + 0.16 clip(Z_apex - Z, 0, 220)`. Measured on 1,402 GT ribs of the 59 scans (`python -m ribline.scripts.polar_angle_stats`): `theta_end > theta_start` on 100 %, strictly monotonic on 78.6 % (vs 57.0 % for a torso-center angle), local reversal > 0.1 rad on 0.6 % (vs 7.6 %). Posterior end of rib 1 lies +11.9 +/- 9.3 mm above `Z_apex`; midline error 2.5 +/- 2.4 mm.
+2. **Detectors** (`ribline/model/features.py`, `ribline/model/unet/`): see the table above. The forests are evaluated on all non-air voxels (`gaussian(HU, 1.2) > -20`), a speed optimization only; forest training negatives are sampled uniformly over the whole volume.
+3. **Stage 3** (`reconstruction.py`, `topology.py`, `refinement.py`): anatomical mask (bone band, vertebral / sternal corridors, shoulder exclusion, intercostal valley suppression), threshold 0.45, 3D skeleton, graph decomposition, hairpin / height-jump splitting, azimuthal chaining; per-hemithorax candidate consolidation; patient scale `s_Z`; relative Mahalanobis + template unaries; bilateral Viterbi DP with clutter costs and skip penalties, two passes with contralateral coupling; `RibSnake` (apical trimming at 0.55 W, terminal-rib recovery, 5 iterations of normal-plane centering clamped to 1.6 mm, cubic smoothing spline). Output curves have 15 to ~200 points (median ~150).
 
 ---
 
@@ -165,8 +188,8 @@ Implemented in `ribline.model.metrics.evaluate_subject_ribs` (defaults = protoco
 | **Labeled clDice (3 / 4 mm)** | per-rib centerline Dice, missing ribs = 0 |
 | **Labeling accuracy** | GT rib correct iff same-label prediction exists, **`d_p2g <= 10 mm` and `d_g2p <= 10 mm`**, and the GT rib is the closest one to that prediction; pooled over ribs (all / first / intermediate 2-11 / twelfth); undefined groups give `nan` |
 | **Recall** | GT rib detected iff some predicted curve satisfies the symmetric criterion |
-| **Precision / FP** | predicted curve is a true positive iff `d_p2g <= 10 mm` to some GT rib |
-| **NLD** | normalised length difference, missing = 1 |
+| **Precision / FP** | predicted curve is a true positive iff `d_p2g <= 10 mm` to some GT rib (`curve_precision_symmetric` requires both `d_p2g <= 10 mm` and `d_g2p <= 10 mm`) |
+| **NLD** | normalized length difference, missing = 1 |
 | **Uncertainty** | subject-level mean +/- SD with 95 % bootstrap CI (10,000 resamples); Wilson 95 % CI for pooled rates; two-sided Wilcoxon signed-rank tests between methods |
 
 The previous release used a one-sided 8 mm criterion, dropped missed ribs from the LCD mean, defaulted 12th-rib accuracy to 1.0 when no 12th ribs existed and reported unlabeled clDice; the legacy quantities are still returned under `*_onesided` / `*_matched_only` keys for comparison.
@@ -220,12 +243,12 @@ Sensitivity: unmodified GT (285 ribs) 2.08 +/- 0.46 mm, 96.8 % (276/285); unmodi
 
 **(a) Frozen pipeline on the 47 annotated training scans** (`experiments/rebuttal/run_train47.py` -> `experiments/rebuttal/ablation_train47/benchmark.json`; detectors in-sample, Stage-3 constants never inspected on these scans, 1,116 GT ribs):
 
-| Method | LCD (mm) | 95 % CI | lab. clDice 3 / 4 mm | Acc all | Acc 1st | Acc 2-11 | Acc 12th | Recall | Precision (FP) | NLD |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Anatomical SCF + Stage 3 | 3.62 +/- 3.97 | [2.67, 4.91] | 0.830 / 0.895 | 92.4 % | 89.2 % | 92.4 % | 95.7 % | 94.8 % | 97.4 % (29) | 0.094 |
-| 3D U-Net + Stage 3 | 5.84 +/- 7.20 | [3.95, 8.03] | 0.785 / 0.826 | 83.9 % | 69.9 % | 86.0 % | 76.3 % | 91.6 % | 97.8 % (25) | 0.142 |
-| Hybrid + Viterbi (no RibSnake) | 2.98 +/- 2.11 | [2.42, 3.63] | 0.875 / 0.930 | 95.6 % | 88.2 % | 96.1 % | 97.8 % | 96.1 % | 98.5 % (17) | 0.155 |
-| **Hybrid + full Stage 3** | **2.63 +/- 1.91** | [2.14, 3.23] | **0.885 / 0.932** | 95.4 % (1065/1116) | 86.0 % | 96.1 % | 97.8 % | 95.6 % | 98.2 % (20) | **0.083** |
+| Method | LCD (mm) | 95 % CI | UCD (mm) | lab. clDice 3 / 4 mm | Acc all | Acc 1st | Acc 2-11 | Acc 12th | Recall | Precision (FP) | NLD |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Anatomical SCF + Stage 3 | 3.62 +/- 3.97 | [2.67, 4.91] | 2.97 | 0.830 / 0.895 | 92.4 % | 89.2 % | 92.4 % | 95.7 % | 94.8 % | 97.4 % (29) | 0.094 |
+| 3D U-Net + Stage 3 | 5.84 +/- 7.20 | [3.95, 8.03] | 2.98 | 0.785 / 0.826 | 83.9 % | 69.9 % | 86.0 % | 76.3 % | 91.6 % | 97.8 % (25) | 0.142 |
+| Hybrid + Viterbi (no RibSnake) | 2.98 +/- 2.11 | [2.42, 3.63] | 2.77 | 0.875 / 0.930 | 95.6 % | 88.2 % | 96.1 % | 97.8 % | 96.1 % | 98.5 % (17) | 0.155 |
+| **Hybrid + full Stage 3** | **2.63 +/- 1.91** | [2.14, 3.23] | **2.62** | **0.885 / 0.932** | 95.4 % (1065/1116) | 86.0 % | 96.1 % | 97.8 % | 95.6 % | 98.2 % (20) | **0.083** |
 
 Median LCD 1.89 mm (same as on the 12 scans), 28 / 47 scans labeled perfectly, 4 scans with LCD > 5 mm (worst `HP_485533` 10.3 mm, `03_Anonymous_0002` 9.9 mm, label shifts on one side). The gap to the 12-scan figures (2.05 mm / 97.2 %) is the price of tuning Stage 3 on those scans plus the larger anatomical variety of the training cohort; treat the 12-scan numbers as an optimistic upper bound.
 
@@ -248,11 +271,11 @@ Wu et al. 2012 report 89.5 - 95.9 % labeling accuracy on an SCR cohort, Lenga et
 
 ## Limitations and Known Issues
 
-- **Small, single-source data set**: 60 scans (59 annotated) at 2 mm from one archive; no acquisition metadata; generalisation to other scanners / resolutions / pathologies is untested.
+- **Small, single-source dataset**: 60 scans (59 annotated) at 2 mm from one archive; no acquisition metadata; generalization to other scanners / resolutions / pathologies is untested.
 - **Non-random, tiny held-out set**: 12 scans (286 ribs), alphabetical tail of the file list. 8 errors in 286 ribs give a Wilson CI of 94.6 - 98.6 % for labeling accuracy; 0 subject-level failures in 12 scans only bound the per-scan failure rate below ~25 %.
-- **Stage-3 constants were tuned with the evaluation scans visible.** There is no untouched test set for this data set. Treat the released constants as fitted to SCR; see the cross-validation.
+- **Stage-3 constants were tuned with the evaluation scans visible.** There is no untouched test set for this dataset. Treat the released constants as fitted to SCR; see the cross-validation.
 - **Annotation errors / inconsistencies**: one merged-rib annotation (fixed, logged); 12th ribs annotated inconsistently (absent in `Tsc_004002`); some residual error is annotation noise.
-- **Possible patient overlap** between `Bro_004029_0040290098_0001` (train) and `Sko_004029_0040290098_0002` (eval): different matrix / intensity encoding / FOV (voxel correlation 0.25) but rib-length fingerprints among the 1 % most similar of all scan pairs; cannot be resolved from anonymised data (`experiments/rebuttal/provenance.json`, `bro_sko_lengths.json`).
+- **Possible patient overlap** between `Bro_004029_0040290098_0001` (train) and `Sko_004029_0040290098_0002` (eval): different matrix / intensity encoding / FOV (voxel correlation 0.25) but rib-length fingerprints among the 1 % most similar of all scan pairs; cannot be resolved from anonymized data (`experiments/rebuttal/provenance.json`, `bro_sko_lengths.json`).
 - **Dominant failure mode**: ribs traced only over their posterior part across a costal-cartilage gap (counted as errors by the symmetric criterion).
 - **Pass-2 forest provenance**: the released Pass-2 forest was trained on Pass-1 maps from an earlier Pass-1 forest (`experiments/full_v4`), not from the released Pass-1 forest; it is kept as an ablation baseline only.
 - `ribline/scripts/correct_gt.py` is a development-time experiment that produced a copy of the GT identical to the original (verified for all 60 files); it is not part of the protocol.
@@ -271,7 +294,7 @@ Wu et al. 2012 report 89.5 - 95.9 % labeling accuracy on an SCR cohort, Lenga et
 | Atlas | `python -m ribline.scripts.build_atlas ...` |
 | Frozen Stage 3 on the 47 training scans | `experiments/rebuttal/run_train47.py` |
 | 5-fold cross-validation | `experiments/rebuttal/cv_fold.py {0..4}` |
-| Unit tests (19, incl. corrected metrics) | `python run_tests.py` |
+| Unit tests (25, incl. corrected metrics, multi-format I/O, and CLI entry points) | `python run_tests.py` |
 
 ---
 

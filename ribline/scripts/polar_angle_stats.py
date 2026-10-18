@@ -26,7 +26,7 @@ import numpy as np
 import SimpleITK as sitk
 
 from ribline.data.centerline_parser import parse_rib_xls
-from ribline.data.image_reader import load_image
+from ribline.data.image_reader import load_image, resolve_subject_image_path
 from ribline.model.anatomy import extract_thoracic_frame, get_polar_angle
 
 
@@ -65,7 +65,9 @@ def main():
     per_rib_nonmono = {}
     for s in subjects:
         gt_path = os.path.join(args.gt_dir, f"{s}_interp.xls")
-        img_path = os.path.join(args.image_dir, f"{s}.img")
+        if not os.path.exists(gt_path):
+            gt_path = os.path.join(args.gt_dir, f"{s}.xls")
+        img_path = resolve_subject_image_path(args.image_dir, s)
         if not (os.path.exists(gt_path) and os.path.exists(img_path)):
             continue
         gt = parse_rib_xls(gt_path)

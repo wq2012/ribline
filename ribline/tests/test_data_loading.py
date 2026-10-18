@@ -155,6 +155,71 @@ class TestDataLoading(unittest.TestCase):
         unet_loaded = RibUNet3D.load(unet_path)
         self.assertIsInstance(unet_loaded, RibUNet)
 
+        # Test predict_proba and apply_sigmoid
+        x = torch.randn(1, 1, 16, 16, 16)
+        probs = unet_loaded.predict_proba(x)
+        self.assertTrue(torch.all((probs >= 0.0) & (probs <= 1.0)))
+        unet_sig = RibUNet3D(in_channels=1, out_channels=1, base_filters=8, apply_sigmoid=True)
+        unet_sig.eval()
+        with torch.no_grad():
+            out_sig = unet_sig(x)
+        self.assertTrue(torch.all((out_sig >= 0.0) & (out_sig <= 1.0)))
+
+    def test_nifti_discovery_and_small_volume_patch(self):
+        from ribline.model.unet.dataset import RibDLDataset, RibPatchDataset3D
+
+        self.assertIs(RibPatchDataset3D, RibDLDataset)
+        # Write a small 12x12x12 NIfTI volume (.nii.gz)
+        arr = np.random.randn(12, 12, 12).astype(np.float32)
+        img = sitk.GetImageFromArray(arr)
+        img.SetSpacing((2.0, 2.0, 2.0))
+        sitk.WriteImage(img, os.path.join(self.img_dir, "nifti_sub.nii.gz"))
+        self.create_dummy_centerline("nifti_sub")
+
+        ds = RibDataset(self.img_dir, self.gt_dir)
+        self.assertIn("nifti_sub", ds.subjects)
+
+        patch_ds = RibPatchDataset3D(
+            ds,
+            cache_dir=os.path.join(self.test_dir, "mask_cache"),
+            patch_size=(16, 16, 16),
+            samples_per_volume=2,
+        )
+        sample = patch_ds[0]
+        self.assertEqual(tuple(sample["image"].shape), (1, 16, 16, 16))
+        self.assertEqual(tuple(sample["mask"].shape), (1, 16, 16, 16))
+
+    def test_hub_load_pretrained_models(self):
+        import torch
+        from ribline import (
+            RibCageStatisticalAtlas,
+            RibForest,
+            RibUNet3D,
+            load_pretrained_models,
+        )
+
+        hub_dir = os.path.join(self.test_dir, "mock_hub")
+        os.makedirs(hub_dir, exist_ok=True)
+        atlas = RibCageStatisticalAtlas()
+        atlas.save(os.path.join(hub_dir, "rib_atlas.joblib"))
+
+        rf = RibForest(n_estimators=2, max_depth=2, n_jobs=1)
+        rf.fit(np.random.randn(10, 4).astype(np.float32), np.array([0, 1] * 5, dtype=np.int32))
+        rf.save(os.path.join(hub_dir, "rib_forest_anatomical.joblib"))
+        with open(os.path.join(hub_dir, "feature_config_anatomical.json"), "w") as f:
+            f.write('{"scales": [1.0, 2.0, 4.0], "rsid_params": {"num_pairs": 10, "max_offset": 12, "seed": 42}, "use_anatomical_features": true}')
+        with open(os.path.join(hub_dir, "train_config_unet.json"), "w") as f:
+            f.write('{"model_config": {"base_filters": 16}}')
+
+        unet = RibUNet3D(in_channels=1, out_channels=1, base_filters=16)
+        torch.save(unet.state_dict(), os.path.join(hub_dir, "rib_unet_3d.pth"))
+
+        bundle = load_pretrained_models("wq2012/ribline-3d-ct-centerline", local_dir=hub_dir, device="cpu")
+        self.assertEqual(bundle["local_dir"], hub_dir)
+        self.assertIsInstance(bundle["atlas"], RibCageStatisticalAtlas)
+        self.assertIsInstance(bundle["forest"], RibForest)
+        self.assertIsInstance(bundle["unet"], RibUNet3D)
+
 
 if __name__ == '__main__':
     unittest.main()

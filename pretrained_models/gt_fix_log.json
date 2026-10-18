@@ -1,5 +1,5 @@
 {
-  "source_dir": "/usr/local/google/home/quanw/Code/siemens_2012/Rib/Data/Centerlines_GT",
+  "source_dir": "data/Centerlines_GT",
   "jump_mm": 50.0,
   "changes": {
     "RIB_007_20091210_bone_1.5_0.6_12_38_interp.xls": [

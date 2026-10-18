@@ -18,7 +18,7 @@ class RibSnake:
 
     Performs three anatomically constrained operations:
       1. Apical First-Rib (`R01`/`L01`) sternoclavicular/clavicular branch trimming
-         using the canonical thoracic width invariant (W_1 / W_thorax <= 0.56).
+         using the canonical thoracic width invariant (W_1 / W_thorax <= 0.55).
       2. Patient-conditioned deformable template recovery of low-contrast apical
          (`R01`/`L01`) and thoracolumbar floating (`R12`/`L12`) ribs within the
          template's tubular Voronoi basin when supported by cortical bone and

@@ -220,8 +220,11 @@ def extract_thoracic_frame(
         y_ant = y_spine - 160.0
         y_post = y_spine + 10.0
 
-    dist_lung_sub = ndi.distance_transform_edt(~lung_mask_sub) * sx_s
+    dist_lung_sub = ndi.distance_transform_edt(
+        ~lung_mask_sub, sampling=(sz_s, sy_s, sx_s)
+    )
 
+    z_top_margin_mm = float((oz + (nz - 1) * sz) - z_apex)
     frame = {
         "x_spine": x_spine,
         "y_spine": y_spine,
@@ -232,6 +235,8 @@ def extract_thoracic_frame(
         "z_apex_r": z_apex_r,
         "z_apex_l": z_apex_l,
         "z_base": z_base,
+        "z_top_margin_mm": z_top_margin_mm,
+        "fov_truncated_superior": bool(z_top_margin_mm < 15.0),
         "w_thorax": max(w_thorax, 90.0),
         "y_ant": y_ant,
         "y_post": y_post,
@@ -327,11 +332,11 @@ def get_anatomical_rib_mask(
 
     Excludes:
       - Non-bone background (> max_bone_dist_mm from cortical/trabecular bone),
-      - Central vertebral body/spinous process corridor (|X - X_spine(Z)| < 11 mm),
-      - Anterior sternal plate (|X - X_spine(Z)| < 32 mm in anterior thorax),
+      - Central vertebral body/spinous process corridor (|X - X_spine(Z)| < 10.5 mm),
+      - Anterior sternal plate (|X - X_spine(Z)| < 31.0 mm in anterior thorax),
       - Extrathoracic shoulder bones (scapula, lateral clavicle, humerus) where
         d_lung > 26 mm in the upper thorax (Z > Z_apex - 140 mm),
-      - Extrathoracic craniocaudal slices outside [Z_apex - 275 mm, Z_apex + 38 mm],
+      - Extrathoracic craniocaudal slices outside [Z_apex - 365 mm, Z_apex + 32 mm],
       - Vertical intercostal soft-tissue valleys between adjacent ribs.
     """
     hu = standardize_hu(hu_arr)

@@ -297,18 +297,34 @@ def evaluate_subject_ribs(
     # Precision / false positives over predicted curves. A predicted curve is a
     # false positive if it does not lie on ANY GT rib (mean prediction-to-GT
     # distance > tol). Partial coverage of a rib is penalised by recall / clDice,
-    # not here.
+    # not here. We also compute ``curve_precision_symmetric`` requiring both
+    # d_p2g <= tol and d_g2p <= tol to some GT rib.
     tp_curves = 0
+    tp_curves_sym = 0
     false_positive_curves = []
+    false_positive_curves_sym = []
     for p_name in pred_valid:
         best_dp = min(pair_d[(p_name, g_name)][0] for g_name in gt_valid)
         if best_dp <= match_tol_mm:
             tp_curves += 1
         else:
             false_positive_curves.append(p_name)
+        if any(
+            (pair_d[(p_name, g_name)][0] <= match_tol_mm)
+            and (pair_d[(p_name, g_name)][1] <= match_tol_mm)
+            for g_name in gt_valid
+        ):
+            tp_curves_sym += 1
+        else:
+            false_positive_curves_sym.append(p_name)
 
     def _mean_or_nan(vals):
         return float(np.mean(vals)) if len(vals) else float("nan")
+
+    curve_prec = (float(tp_curves) / len(pred_valid)) if pred_valid else float("nan")
+    curve_prec_sym = (
+        (float(tp_curves_sym) / len(pred_valid)) if pred_valid else float("nan")
+    )
 
     summary = {
         "num_gt_ribs": len(gt_valid),
@@ -337,8 +353,11 @@ def evaluate_subject_ribs(
         "nld": _mean_or_nan(nlds),
         "detection_recall": _mean_or_nan(detected_flags),
         "detection_recall_onesided": _mean_or_nan(detected_flags_onesided),
-        "precision": (float(tp_curves) / len(pred_valid)) if pred_valid else float("nan"),
+        "precision": curve_prec,
+        "curve_precision": curve_prec,
+        "curve_precision_symmetric": curve_prec_sym,
         "num_false_positive_curves": len(false_positive_curves),
+        "num_false_positive_curves_symmetric": len(false_positive_curves_sym),
         "false_positive_curves": sorted(false_positive_curves),
         "label_acc_all": _mean_or_nan(acc_all),
         "label_acc_all_onesided": _mean_or_nan(acc_all_onesided),

@@ -8,4 +8,5 @@ pandas
 SimpleITK
 networkx
 tqdm
-torch
+huggingface_hub>=0.20.0
+torch>=2.0.0

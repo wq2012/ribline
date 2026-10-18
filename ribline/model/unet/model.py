@@ -31,8 +31,9 @@ class RibUNet(nn.Module):
     Structure: Encoders -> Bottleneck -> Decoders
     Depth: 3 layers (16 -> 32 -> 64).
     """
-    def __init__(self, in_channels=1, out_channels=1, base_filters=16):
+    def __init__(self, in_channels=1, out_channels=1, base_filters=16, apply_sigmoid: bool = False):
         super().__init__()
+        self.apply_sigmoid = bool(apply_sigmoid)
         
         # Encoder
         self.enc1 = ConvBlock(in_channels, base_filters)
@@ -54,7 +55,7 @@ class RibUNet(nn.Module):
         # Final Output
         self.final_conv = nn.Conv3d(base_filters, out_channels, kernel_size=1)
         
-    def forward(self, x):
+    def forward(self, x, apply_sigmoid=None):
         # Encoder
         e1 = self.enc1(x)
         p1 = self.pool1(e1)
@@ -75,7 +76,15 @@ class RibUNet(nn.Module):
         d1 = self.dec1(torch.cat([u1, e1], dim=1))
         
         logits = self.final_conv(d1)
+        use_sigmoid = self.apply_sigmoid if apply_sigmoid is None else bool(apply_sigmoid)
+        if use_sigmoid:
+            return torch.sigmoid(logits)
         return logits
+
+    def predict_proba(self, x):
+        """Computes voxel-wise centerline probabilities in [0, 1] via sigmoid(logits)."""
+        with torch.no_grad():
+            return torch.sigmoid(self.forward(x, apply_sigmoid=False))
 
     @classmethod
     def load(cls, filepath, map_location="cpu"):

@@ -15,7 +15,7 @@ import numpy as np
 import SimpleITK as sitk
 
 from ribline.data.centerline_parser import parse_rib_xls
-from ribline.data.image_reader import load_image
+from ribline.data.image_reader import load_image, resolve_subject_image_path
 from ribline.model.metrics import chamfer_distance
 from ribline.model.reconstruction import CenterlineExtractor
 
@@ -29,7 +29,7 @@ def evaluate_single(subject_id, prob_dir, image_dir, gt_dir, min_length=30.0, th
     gt_ribs = parse_rib_xls(gt_files[0])
     all_gt_points = np.vstack(list(gt_ribs.values()))
 
-    orig_img = load_image(os.path.join(image_dir, f"{subject_id}.img"))
+    orig_img = load_image(resolve_subject_image_path(image_dir, subject_id))
     spacing = orig_img.GetSpacing()
     origin = orig_img.GetOrigin()
 

@@ -8,7 +8,7 @@ import scipy.ndimage as ndi
 import SimpleITK as sitk
 
 from ribline.data.dataset import RibDataset
-from ribline.data.image_reader import load_image
+from ribline.data.image_reader import load_image, resolve_subject_image_path
 from ribline.model.anatomy import (
     RibCageStatisticalAtlas,
     extract_thoracic_frame,
@@ -163,7 +163,7 @@ def inference(config_path: str, split: str = None, output_dir: str = None,
             try:
                 image, _, _ = dataset.load_item(i)
             except Exception:
-                img_path = os.path.join(image_dir, f"{subject_id}.img")
+                img_path = resolve_subject_image_path(image_dir, subject_id)
                 image = load_image(img_path)
 
             spacing = image.GetSpacing()

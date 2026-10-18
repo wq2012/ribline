@@ -1,16 +1,16 @@
 import os
 import glob
 import numpy as np
-from .image_reader import load_image
+from .image_reader import load_image, resolve_subject_image_path, strip_image_extension
 from .centerline_parser import parse_rib_xls
 import SimpleITK as sitk
 
 class RibDataset:
-    def __init__(self, image_dir, centerline_dir, selected_files=None, radius=2.0):
+    def __init__(self, image_dir, centerline_dir=None, selected_files=None, radius=2.0):
         """
         Args:
-            image_dir (str): Directory containing .img/.hdr files.
-            centerline_dir (str): Directory containing .xls centerline files.
+            image_dir (str): Directory containing 3D volume files (.nii.gz, .nii, .img/.hdr, .mhd, .nrrd).
+            centerline_dir (str, optional): Directory containing .xls centerline files.
             selected_files (list, optional): List of filenames (without extension) to include.
             radius (float): Radius around centerline to consider as positive class.
         """
@@ -21,37 +21,41 @@ class RibDataset:
         
     def _discover_subjects(self, selected_files):
         """
-        Matches images with centerline files. 
-        Returns a list of subject IDs (filenames without extension).
+        Matches images with centerline files across supported 3D volume extensions.
+        Returns a sorted list of unique subject IDs (filenames without extension).
         """
-        # Get all .img files
-        img_files = glob.glob(os.path.join(self.image_dir, "*.img"))
+        if not self.image_dir or not os.path.isdir(self.image_dir):
+            return []
+
+        candidate_ids = []
+        seen = set()
+        for fname in sorted(os.listdir(self.image_dir)):
+            if fname.endswith(("_prob.nii.gz", "_prob.hdr", "_prob.img", "_mask.nii.gz")):
+                continue
+            subject_id, ext = strip_image_extension(fname)
+            if not subject_id or subject_id in seen:
+                continue
+            if ext == ".hdr" and not os.path.exists(os.path.join(self.image_dir, f"{subject_id}.img")):
+                continue
+            seen.add(subject_id)
+            candidate_ids.append(subject_id)
+
         subjects = []
-        
-        for img_path in img_files:
-            basename = os.path.basename(img_path)
-            subject_id = os.path.splitext(basename)[0]
-            
-            # Check if matching centerline file exists
-            # Centerline naming convention seems to vary slightly based on file listing earlier.
-            # GT files: "01_Anonymous_0006_interp.xls" for "01_Anonymous_0006.img"?
-            # Let's verify with a flexible matching or assume "_interp.xls" suffix.
-            # Based on previous ls:
-            # Image: 01_Anonymous_0006.img
-            # GT: 01_Anonymous_0006_interp.xls
-            
+        for subject_id in candidate_ids:
+            if selected_files is not None and subject_id not in selected_files:
+                continue
+            if self.centerline_dir is None:
+                subjects.append(subject_id)
+                continue
+
             gt_path = os.path.join(self.centerline_dir, f"{subject_id}_interp.xls")
-            
             if os.path.exists(gt_path) and os.path.getsize(gt_path) > 0:
-                if selected_files is None or subject_id in selected_files:
-                    subjects.append(subject_id)
+                subjects.append(subject_id)
             else:
-                # Try exact match if suffix is different
                 gt_path_exact = os.path.join(self.centerline_dir, f"{subject_id}.xls")
                 if os.path.exists(gt_path_exact) and os.path.getsize(gt_path_exact) > 0:
-                     if selected_files is None or subject_id in selected_files:
-                        subjects.append(subject_id)
-        
+                    subjects.append(subject_id)
+
         return sorted(subjects)
 
     @staticmethod
@@ -71,16 +75,17 @@ class RibDataset:
             subject_id (str): Subject identifier.
         """
         subject_id = self.subjects[idx]
-        img_path = os.path.join(self.image_dir, f"{subject_id}.img")
-        
-        # Try both suffixes for GT
-        gt_path = os.path.join(self.centerline_dir, f"{subject_id}_interp.xls")
-        if not os.path.exists(gt_path):
-             gt_path = os.path.join(self.centerline_dir, f"{subject_id}.xls")
-             
+        img_path = resolve_subject_image_path(self.image_dir, subject_id)
         image = load_image(img_path)
-        centerlines = parse_rib_xls(gt_path)
-        
+
+        centerlines = {}
+        if self.centerline_dir is not None:
+            gt_path = os.path.join(self.centerline_dir, f"{subject_id}_interp.xls")
+            if not os.path.exists(gt_path):
+                gt_path = os.path.join(self.centerline_dir, f"{subject_id}.xls")
+            if os.path.exists(gt_path):
+                centerlines = parse_rib_xls(gt_path)
+
         return image, centerlines, subject_id
 
     def generate_mask(self, image, centerlines):
